@@ -1,0 +1,8 @@
+{
+  "name": "carlos-statusline",
+  "description": "Statusline avanzado con barras de progreso ANSI, métricas de contexto, costo, git y código",
+  "version": "2.0.0",
+  "author": {
+    "name": "carlos"
+  }
+}
