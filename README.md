@@ -1,62 +1,82 @@
+<img width="100%" src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=0,2,5,30&height=180&section=header&text=claude-plugin-statusline&fontSize=32&fontColor=fff&animation=fadeIn&fontAlignY=32" />
+
 <div align="center">
 
-# carlos-statusline
+![Bash](https://img.shields.io/badge/Bash-4EAA25?style=for-the-badge&logo=gnubash&logoColor=white)
+![Claude Code](https://img.shields.io/badge/Claude_Code-Plugin-7c3aed?style=for-the-badge)
+![Dependencies](https://img.shields.io/badge/dependencies-0-00d4ff?style=for-the-badge)
+![License](https://img.shields.io/github/license/jarero321/plugin-carlos-statusline?style=for-the-badge)
 
-![Bash](https://img.shields.io/badge/Bash-4EAA25?logo=gnubash&logoColor=white)
-![Claude Code](https://img.shields.io/badge/Claude_Code-Plugin-blueviolet)
-![Version](https://img.shields.io/badge/version-1.0.0-blue)
-![Dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)
-![License](https://img.shields.io/badge/license-MIT-green)
+**DX-first statusline for Claude Code with ANSI progress bars, context metrics, cost tracking, and git info.**
 
-**Statusline avanzado para Claude Code con metricas en tiempo real, barra de progreso ANSI y cero dependencias.**
+<a href="https://github.com/jarero321/plugin-carlos-statusline">
+  <img src="https://img.shields.io/badge/CODE-2ea44f?style=for-the-badge&logo=github&logoColor=white" alt="code" />
+</a>
 
-[Instalacion](#instalacion) •
-[Como Funciona](#como-funciona) •
-[Arquitectura](#arquitectura) •
-[Extensibilidad](#extensibilidad)
+[Features](#features) •
+[Installation](#installation) •
+[How It Works](#how-it-works) •
+[Configuration](#configuration) •
+[Extensibility](#extensibility)
 
 </div>
 
 ---
 
+### Preview
+
+```
+[Opus 4.6] │ [━━━╸──] 48% │ [━━━──] 62% │ [━╸────] 18% │ Pro │ +142/-38 │ 🟦 TS │ 🌿 main │ $1.25 │ 3m
+```
+
 ## Features
 
-| Feature | Descripcion |
-|---------|-------------|
-| Modelo activo | Identificacion color-coded (Cyan=Opus, Green=Sonnet, Yellow=Haiku) |
-| Directorio de trabajo | Muestra el directorio actual con icono de carpeta |
-| Branch de Git | Detecta y muestra la rama activa del repositorio |
-| Barra de progreso | 6 bloques ANSI con colores dinamicos segun uso del contexto |
-| Costo acumulado | Muestra el costo en USD con 2 decimales |
-| Lineas +/- | Conteo de lineas agregadas (verde) y eliminadas (rojo) |
+| Feature | Description |
+|:--------|:------------|
+| **Model Detection** | Color-coded model display (Cyan=Opus, Green=Sonnet, Yellow=Haiku) |
+| **Context Progress Bar** | 7-char ANSI bar with dynamic colors based on usage |
+| **Session & Weekly Limits** | Visual bars for rate limit tracking |
+| **Cost Tracking** | Accumulated cost in USD with color thresholds |
+| **Git Integration** | Branch detection + open PR count via `gh` |
+| **Language Detection** | Auto-detect 13+ languages by marker files |
+| **Line Changes** | Green additions / red removals counter |
+| **Agent Mode** | Shows active agent name when in subagent context |
+| **Zero Dependencies** | Pure Bash — no jq, no node, no python |
 
-### Vista previa
+## Tech Stack
 
-```
-[Opus 4.6] │ 📁 mi-proyecto │ 🌿 main │ [███░░░] 48% │ $1.25 │ +142/-38
-```
+<div align="center">
 
-## Instalacion
+**Powered By**
 
-### Prerequisitos
+<img src="https://skillicons.dev/icons?i=bash,git,github&perline=8" alt="tech" />
 
-- Claude Code CLI instalado
+</div>
+
+---
+
+## Installation
+
+### Prerequisites
+
+- Claude Code CLI installed
 - Bash 4.0+
-- Git (opcional, para deteccion de branches)
+- Git (optional, for branch detection)
 
 ### Setup
 
 ```bash
-# 1. Clonar o copiar el plugin al directorio de plugins
+# 1. Clone the plugin to plugins directory
 mkdir -p ~/.claude/plugins/carlos-statusline
 cp -r . ~/.claude/plugins/carlos-statusline/
 
-# 2. Dar permisos de ejecucion
+# 2. Make it executable
 chmod +x ~/.claude/plugins/carlos-statusline/scripts/statusline.sh
 
-# 3. Configurar en settings.json
-# Agregar la siguiente configuracion a ~/.claude/settings.json:
+# 3. Configure in settings.json
 ```
+
+Add to `~/.claude/settings.json`:
 
 ```json
 {
@@ -68,26 +88,26 @@ chmod +x ~/.claude/plugins/carlos-statusline/scripts/statusline.sh
 }
 ```
 
-```bash
-# 4. Reiniciar Claude Code para activar el statusline
-```
+Restart Claude Code to activate.
 
-## Como Funciona
+> Or use the built-in setup skill: the plugin includes `commands/statusline-setup.md` that automates configuration.
 
-El plugin opera como un **script de procesamiento de stdin**. Claude Code invoca el comando configurado y le pasa un JSON por stdin con el estado actual de la sesion.
+---
 
-### Flujo de datos
+## How It Works
+
+The plugin operates as a **stdin processor**. Claude Code invokes the configured command and pipes a JSON payload with the current session state.
 
 ```
 Claude Code (JSON stdin) ──▶ statusline.sh ──▶ ANSI output (stdout)
 ```
 
-### JSON de entrada (ejemplo)
+### Input JSON (example)
 
 ```json
 {
   "model": { "display_name": "Opus 4.6" },
-  "workspace": { "current_dir": "/home/carlos/mi-proyecto" },
+  "workspace": { "current_dir": "/home/carlos/my-project" },
   "cost": {
     "total_cost_usd": 1.25,
     "total_lines_added": 142,
@@ -97,148 +117,151 @@ Claude Code (JSON stdin) ──▶ statusline.sh ──▶ ANSI output (stdout)
 }
 ```
 
-### Procesamiento interno
+### Processing Pipeline
 
-1. **Lectura**: El script lee el JSON completo desde stdin
-2. **Parsing**: Un parser custom con `grep -oP` extrae valores (soporta claves anidadas)
-3. **Git**: Detecta la rama activa via `git branch --show-current`
-4. **Rendering**: Construye la linea con codigos ANSI y la emite por stdout
+1. **Read**: Full JSON from stdin
+2. **Parse**: Custom `grep -oP` extractor (no jq needed)
+3. **Detect**: Git branch, language, plan tier, agent mode
+4. **Render**: ANSI-formatted statusline to stdout (no trailing newline)
 
-## Arquitectura
+---
+
+## Architecture
 
 ```
-carlos-statusline/
+claude-plugin-statusline/
 ├── .claude-plugin/
-│   └── plugin.json          # Metadata del plugin (nombre, version, autor)
+│   └── plugin.json          # Plugin metadata (name, version, author)
 ├── commands/
-│   └── statusline-setup.md  # Instrucciones de setup para Claude
+│   └── statusline-setup.md  # Setup automation skill for Claude
 ├── scripts/
-│   └── statusline.sh        # Script principal (143 lineas)
+│   └── statusline.sh        # Core script (286 lines)
 └── README.md
 ```
 
-| Archivo | Responsabilidad |
-|---------|-----------------|
-| `plugin.json` | Declara el plugin ante el ecosistema de Claude Code |
-| `statusline-setup.md` | Skill que automatiza la configuracion del plugin |
-| `statusline.sh` | Core: parsing JSON, logica de rendering, output ANSI |
+| File | Responsibility |
+|:-----|:---------------|
+| `plugin.json` | Declares the plugin to Claude Code ecosystem |
+| `statusline-setup.md` | Skill that automates settings.json configuration |
+| `statusline.sh` | Core: JSON parsing, rendering logic, ANSI output |
 
-### Decisiones de diseno
+### Design Decisions
 
-| Decision | Razon |
-|----------|-------|
-| Bash puro | Cero dependencias, disponible en cualquier sistema Unix |
-| Sin jq | Elimina la necesidad de instalar herramientas externas |
-| `grep -oP` | Parser liviano con soporte para claves anidadas |
-| ANSI codes directos | Maxima compatibilidad con terminales modernas |
-| `echo -en` sin newline | Permite a Claude Code controlar el layout final |
+| Decision | Reason |
+|:---------|:-------|
+| **Pure Bash** | Zero dependencies, available on any Unix system |
+| **No jq** | Eliminates external tooling requirement |
+| **`grep -oP`** | Lightweight parser with nested key support |
+| **ANSI codes** | Maximum compatibility with modern terminals |
+| **`echo -en`** | No trailing newline — Claude Code controls layout |
 
-## Configuracion
+---
 
-| Variable (en script) | Descripcion | Valor |
-|----------------------|-------------|-------|
-| `RESET` | Reset de colores ANSI | `\033[0m` |
-| `BOLD` | Texto en negrita | `\033[1m` |
-| `FG_CYAN` | Color para modelos Opus | `\033[36m` |
-| `FG_GREEN` | Color para modelos Sonnet | `\033[32m` |
-| `FG_YELLOW` | Color para modelos Haiku | `\033[33m` |
+## Configuration
 
-### Umbrales de la barra de progreso
+### Progress Bar Thresholds
 
-| Uso del contexto | Color | Significado |
-|------------------|-------|-------------|
-| < 50% | Verde | Uso saludable |
-| 50% - 74% | Amarillo | Uso moderado |
-| >= 75% | Rojo | Contexto casi lleno |
+| Context Usage | Color | Meaning |
+|:--------------|:------|:--------|
+| < 50% | Green | Healthy usage |
+| 50% - 74% | Yellow | Moderate usage |
+| >= 75% | Red | Context almost full |
 
-## Extensibilidad
+### Cost Thresholds
 
-El plugin fue disenado como un script modular que se puede extender de varias maneras:
+| Cost | Color | Meaning |
+|:-----|:------|:--------|
+| < $2 | White | Normal |
+| $2 - $5 | Yellow | Moderate |
+| >= $5 | Red | High spend |
 
-### 1. Agregar nuevos segmentos
+### Language Detection
 
-Cada segmento del statusline es independiente. Para agregar uno nuevo, solo se necesita:
+| Language | Marker File |
+|:---------|:------------|
+| Go | `go.mod` |
+| TypeScript | `tsconfig.json` |
+| JavaScript | `package.json` |
+| Rust | `Cargo.toml` |
+| Python | `pyproject.toml`, `requirements.txt` |
+| PHP | `composer.json` |
+| Ruby | `Gemfile` |
+| C# | `.csproj`, `.sln` |
+| Java | `pom.xml`, `build.gradle` |
+| Dart | `pubspec.yaml` |
+| Elixir | `mix.exs` |
+| Swift | `Package.swift` |
+| C/C++ | `CMakeLists.txt`, `Makefile` |
 
-```bash
-# Extraer el valor del JSON
-mi_valor=$(extract_json "nueva_clave" "default")
+### Optional Config File
 
-# Agregar al output
-output+=" ${SEP} 🏷️ ${mi_valor}"
-```
-
-### 2. Crear variantes del script
-
-Se puede tener multiples scripts y cambiar entre ellos en `settings.json`:
-
-```
-scripts/
-├── statusline.sh          # Default: completo
-├── statusline-minimal.sh  # Solo modelo + contexto
-└── statusline-git.sh      # Enfocado en metricas git
-```
-
-### 3. Sistema de plugins modulares
-
-Se podria evolucionar a un sistema donde cada segmento sea un script independiente:
-
-```
-segments/
-├── model.sh       # Renderiza el modelo
-├── git.sh         # Renderiza info de git
-├── context.sh     # Renderiza barra de progreso
-├── cost.sh        # Renderiza costo
-└── lines.sh       # Renderiza lineas +/-
-```
-
-Y un orquestador que los ejecute en orden:
+Create `~/.config/carlos-statusline/config`:
 
 ```bash
-for segment in segments/*.sh; do
-    output+=$(source "$segment")
-    output+=" ${SEP} "
-done
-```
-
-### 4. Configuracion externa
-
-Se podria agregar un archivo de configuracion para personalizar sin editar el script:
-
-```bash
-# ~/.config/carlos-statusline/config
+USAGE_CACHE_TTL=300
 SHOW_GIT=true
 SHOW_COST=true
 SHOW_LINES=true
 BAR_WIDTH=6
-THEME="default"  # default, minimal, nerd-fonts
+THEME="default"
 ```
 
-### 5. Temas
+---
 
-Soporte para diferentes conjuntos de iconos:
+## Extensibility
 
-| Tema | Carpeta | Git | Separador |
-|------|---------|-----|-----------|
-| `default` | 📁 | 🌿 | `│` |
-| `nerd-fonts` |  |  | `│` |
+### Add New Segments
+
+Each statusline segment is independent:
+
+```bash
+# Extract value from JSON
+my_value=$(jval "new_key" "default")
+
+# Append to output
+output+=" ${SEP} ${my_value}"
+```
+
+### Script Variants
+
+Create multiple scripts and switch in `settings.json`:
+
+```
+scripts/
+├── statusline.sh          # Default: full
+├── statusline-minimal.sh  # Model + context only
+└── statusline-git.sh      # Git-focused metrics
+```
+
+### Theme Support
+
+| Theme | Folder | Git | Separator |
+|:------|:-------|:----|:----------|
+| `default` | folder icon | branch icon | `│` |
+| `nerd-fonts` | nerd icon | nerd icon | `│` |
 | `ascii` | `DIR:` | `BR:` | `\|` |
-| `minimal` | *(oculto)* | *(oculto)* | ` ` |
+| `minimal` | *(hidden)* | *(hidden)* | ` ` |
 
-## Como se creo
+---
 
-Este plugin fue creado siguiendo la API de statusline de Claude Code:
+## Contributing
 
-1. **Se creo la estructura** de plugin en `~/.claude/plugins/`
-2. **Se definio el metadata** en `plugin.json` con nombre, descripcion y version
-3. **Se escribio el script** en Bash puro que:
-   - Lee JSON de stdin (formato que envia Claude Code)
-   - Parsea las claves necesarias sin dependencias externas
-   - Genera output ANSI formateado
-4. **Se registro el comando** en `~/.claude/settings.json` bajo la clave `statusLine`
-5. **Se creo un skill** (`statusline-setup.md`) para automatizar la configuracion
-
-La clave del funcionamiento es que Claude Code ejecuta el comando configurado, le pasa el estado de la sesion como JSON por stdin, y usa el stdout como contenido del statusline.
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'feat: add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## License
 
-MIT
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+<div align="center">
+
+**[Report Bug](https://github.com/jarero321/plugin-carlos-statusline/issues)** · **[Request Feature](https://github.com/jarero321/plugin-carlos-statusline/issues)**
+
+</div>
+
+<img width="100%" src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=0,2,5,30&height=120&section=footer" />
